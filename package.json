@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "emu": "npx firebase emulators:start --only firestore,auth,ui --project demo-alpha-league --import=./.emulator-data --export-on-exit",
+    "emu": "npx firebase emulators:start --only firestore,auth,ui --project alpha-league-emulator --import=./.emulator-data --export-on-exit",
     "rules:deploy": "npx firebase deploy --only firestore:rules",
     "indexes:deploy": "npx firebase deploy --only firestore:indexes",
     "seed": "node scripts/seed.js"
