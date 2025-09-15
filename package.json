@@ -7,9 +7,10 @@
     "start": "node index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "emu": "npx firebase emulators:start --only firestore,auth,ui --project alpha-league-emulator --import=./.emulator-data --export-on-exit",
+    "seed": "FIRESTORE_EMULATOR_HOST=127.0.0.1:8085 FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9095 node scripts/seed.js",
+    "peek": "FIRESTORE_EMULATOR_HOST=127.0.0.1:8085 node scripts/peek.js",
     "rules:deploy": "npx firebase deploy --only firestore:rules",
-    "indexes:deploy": "npx firebase deploy --only firestore:indexes",
-    "seed": "node scripts/seed.js"
+    "indexes:deploy": "npx firebase deploy --only firestore:indexes"
   },
   "keywords": [],
   "author": "",
