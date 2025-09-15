@@ -133,3 +133,8 @@ dist
 .breakpoints
 # Secrets
 service-account.json
+
+# Ignore extras
+node_modules/
+.config/
+attached_assets/
