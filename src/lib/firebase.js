@@ -21,14 +21,23 @@ let app = null
 let auth = null
 
 try {
+  console.log('[Firebase] Config check:', {
+    hasApiKey: !!cfg.apiKey,
+    hasAuthDomain: !!cfg.authDomain,
+    hasProjectId: !!cfg.projectId,
+    hasAppId: !!cfg.appId
+  })
+  
   if (!hasRequiredConfig()) {
     console.warn(
       '[Firebase] Missing required config. Add VITE_FIREBASE_* secrets in Replit. ' +
       'Required: apiKey, authDomain, projectId, appId'
     )
   } else {
+    console.log('[Firebase] Initializing with valid config')
     app = getApps().length ? getApp() : initializeApp(cfg)
     auth = getAuth(app)
+    console.log('[Firebase] Successfully initialized')
   }
 } catch (err) {
   console.error('[Firebase] Initialization error:', err)
