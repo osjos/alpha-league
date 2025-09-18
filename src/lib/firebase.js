@@ -1,37 +1,26 @@
-import { initializeApp, getApps, getApp } from 'firebase/app'
-import { getAuth } from 'firebase/auth'
+import { initializeApp } from "firebase/app";
+import { getAuth, connectAuthEmulator } from "firebase/auth";
+import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
 
-// We expect these to be set via Replit Secrets.
-// Only VITE_* keys are exposed to the client at build-time.
-const cfg = {
+const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
-}
+  authDomain: "alpha-league-4370d.firebaseapp.com",
+  projectId: "alpha-league-4370d",
+  storageBucket: "alpha-league-4370d.firebasestorage.app",
+  messagingSenderId: "109862722648",
+  appId: "1:109862722648:web:a2a9559efe7df1d99fbe2d",
+};
 
-function hasRequiredConfig() {
-  return !!(cfg.apiKey && cfg.authDomain && cfg.projectId && cfg.appId)
-}
+export const app = initializeApp(firebaseConfig);
+export const auth = getAuth(app);
+export const db = getFirestore(app);
 
-let app = null
-let auth = null
-
-try {
-  if (!hasRequiredConfig()) {
-    console.warn(
-      '[Firebase] Missing required config. Add VITE_FIREBASE_* secrets in Replit. ' +
-      'Required: apiKey, authDomain, projectId, appId'
-    )
-  } else {
-    app = getApps().length ? getApp() : initializeApp(cfg)
-    auth = getAuth(app)
-  }
-} catch (err) {
-  console.error('[Firebase] Initialization error:', err)
-}
-
-export { app, auth }
+/**
+ * Optional: Emulator wiring (we'll turn this on later if you want).
+ * Replit previews don't run on localhost, so this won't auto-trigger.
+ * When we want emulators, we'll explicitly call these in a small toggle.
+ */
+// if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
+//   connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
+//   connectFirestoreEmulator(db, "127.0.0.1", 8080);
+// }

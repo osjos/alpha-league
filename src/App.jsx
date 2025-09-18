@@ -1,3 +1,6 @@
+import { useEffect, useState } from "react";
+import { auth } from "./lib/firebase";
+import { onAuthStateChanged, signInAnonymously, signOut } from "firebase/auth";
 import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
 
 function Landing() {
@@ -104,16 +107,52 @@ function Leaderboard() {
 }
 
 export default function App() {
+  const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      setAuthLoading(false);
+    });
+    return () => unsub();
+  }, []);
+
   return (
     <BrowserRouter>
       {/* Top nav */}
       <nav className="w-full border-b bg-white">
         <div className="max-w-5xl mx-auto px-6 py-3 flex items-center gap-4">
           <Link to="/" className="font-semibold">Alpha League</Link>
-          <div className="ml-auto flex gap-4 text-sm">
+          <div className="ml-auto flex items-center gap-4 text-sm">
             <Link to="/feed" className="hover:underline">Feed</Link>
             <Link to="/submit" className="hover:underline">Submit Idea</Link>
             <Link to="/leaderboard" className="hover:underline">Leaderboard</Link>
+
+            <div className="w-px h-5 bg-gray-300 mx-1" />
+
+            {authLoading ? (
+              <span className="text-gray-500">Auth…</span>
+            ) : user ? (
+              <div className="flex items-center gap-2">
+                <span className="text-gray-600">
+                  Signed in {user.isAnonymous ? "anon" : ""} • {user.uid.slice(0, 6)}…
+                </span>
+                <button
+                  onClick={() => signOut(auth)}
+                  className="border px-3 py-1 rounded-xl hover:bg-gray-50"
+                >
+                  Sign out
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => signInAnonymously(auth)}
+                className="border px-3 py-1 rounded-xl hover:bg-gray-50"
+              >
+                Sign in anonymously
+              </button>
+            )}
           </div>
         </div>
       </nav>
