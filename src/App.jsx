@@ -1,15 +1,8 @@
 import { useEffect, useState } from "react";
 import { auth, db, isEmulator } from "./lib/firebase";
 import { onAuthStateChanged, signInAnonymously, signOut } from "firebase/auth";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import {
-  collection,
-  query,
-  orderBy,
-  limit,
-  onSnapshot,
-  where,
-  addDoc,
+  collection, query, where, orderBy, limit, onSnapshot, doc, setDoc, serverTimestamp, addDoc
 } from "firebase/firestore";
 import IdeaCard from "./components/IdeaCard";
 import Admin from "./pages/Admin.jsx";
@@ -133,49 +126,88 @@ function Feed() {
   const [direction, setDirection] = useState("all");
   const [timeframe, setTimeframe] = useState("all");
 
-  // Subscribe to approved ideas (limit to 50 to avoid heavy reads)
-  useEffect(() => {
-    setLoading(true);
-    const q = query(
-      collection(db, "ideas"),
+useEffect(() => {
+  setLoading(true);
+
+  // Build the base query: approved ideas ordered by createdAt desc
+  const clauses = [
+    where("status", "==", "approved"),
+    orderBy("createdAt", "desc"),
+    limit(50),
+  ];
+
+  // Add equality filters only when not "all"
+  const col = collection(db, "ideas");
+  let qref = query(col, ...clauses);
+
+  if (asset !== "all") {
+    qref = query(col, where("status", "==", "approved"), where("asset", "==", asset), orderBy("createdAt", "desc"), limit(50));
+  }
+  if (direction !== "all" && asset === "all") {
+    qref = query(col, where("status", "==", "approved"), where("direction", "==", direction), orderBy("createdAt", "desc"), limit(50));
+  }
+  if (timeframe !== "all" && asset === "all" && direction === "all") {
+    qref = query(col, where("status", "==", "approved"), where("timeframe", "==", timeframe), orderBy("createdAt", "desc"), limit(50));
+  }
+
+  // Apply 2- and 3-way combos explicitly to keep index sets clear
+  if (asset !== "all" && direction !== "all" && timeframe === "all") {
+    qref = query(col,
       where("status", "==", "approved"),
+      where("asset", "==", asset),
+      where("direction", "==", direction),
+      orderBy("createdAt", "desc"),
       limit(50)
     );
+  }
 
-    const unsub = onSnapshot(
-      q,
-      (snap) => {
-        const rows = [];
-        snap.forEach((d) => rows.push({ id: d.id, ...d.data() }));
-        // sort newest first by createdAt (client-side to avoid composite index for now)
-        rows.sort((a, b) => {
-          const ta = a.createdAt?.seconds || 0;
-          const tb = b.createdAt?.seconds || 0;
-          return tb - ta;
-        });
-        setIdeas(rows);
-        setLoading(false);
-      },
-      (err) => {
-        console.warn("Feed listen failed:", err?.message || err);
-        setLoading(false);
-      }
+  if (asset !== "all" && timeframe !== "all" && direction === "all") {
+    qref = query(col,
+      where("status", "==", "approved"),
+      where("asset", "==", asset),
+      where("timeframe", "==", timeframe),
+      orderBy("createdAt", "desc"),
+      limit(50)
     );
-    return () => unsub();
-  }, []);
+  }
 
-  // Build dropdown options from data
-  const assetOptions = ["all", ...Array.from(new Set(ideas.map(i => i.asset))).filter(Boolean)];
-  const timeframeOptions = ["all", ...Array.from(new Set(ideas.map(i => i.timeframe))).filter(Boolean)];
-  const directionOptions = ["all", "long", "short"];
+  if (direction !== "all" && timeframe !== "all" && asset === "all") {
+    qref = query(col,
+      where("status", "==", "approved"),
+      where("direction", "==", direction),
+      where("timeframe", "==", timeframe),
+      orderBy("createdAt", "desc"),
+      limit(50)
+    );
+  }
 
-  // Apply filters client-side
-  const filtered = ideas.filter((i) => {
-    if (asset !== "all" && i.asset !== asset) return false;
-    if (direction !== "all" && i.direction !== direction) return false;
-    if (timeframe !== "all" && i.timeframe !== timeframe) return false;
-    return true;
+  if (asset !== "all" && direction !== "all" && timeframe !== "all") {
+    qref = query(col,
+      where("status", "==", "approved"),
+      where("asset", "==", asset),
+      where("direction", "==", direction),
+      where("timeframe", "==", timeframe),
+      orderBy("createdAt", "desc"),
+      limit(50)
+    );
+  }
+
+  const unsub = onSnapshot(qref, (snap) => {
+    const rows = [];
+    snap.forEach((d) => rows.push({ id: d.id, ...d.data() }));
+    setIdeas(rows);
+    setLoading(false);
+  }, (err) => {
+    console.warn("Feed listen failed:", err?.message || err);
+    setLoading(false);
   });
+
+  return () => unsub();
+}, [asset, direction, timeframe]);
+
+const assetOptions = ["all", "BTCUSDT", "ETHUSDT", "SOLUSDT"];
+const directionOptions = ["all", "long", "short"];
+const timeframeOptions = ["all", "1h", "4h", "1d", "1w"];
 
   // Temporary: seed a few approved ideas
   const seedIdeas = async () => {
@@ -290,11 +322,11 @@ function Feed() {
       <div className="mt-6">
         {loading ? (
           <div className="text-gray-500">Loading…</div>
-        ) : filtered.length === 0 ? (
+        ) : ideas.length === 0 ? (
           <div className="text-gray-500">No ideas match the filters.</div>
         ) : (
           <div className="space-y-3">
-            {filtered.map((idea) => <IdeaCard key={idea.id} idea={idea} />)}
+            {ideas.map((idea) => <IdeaCard key={idea.id} idea={idea} />)}
           </div>
         )}
       </div>
