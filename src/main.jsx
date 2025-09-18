@@ -19,7 +19,17 @@ const router = createBrowserRouter([
     errorElement: <RouteError />,
     children: [
       { path: '/', element: <Home /> },
-      { path: '/ideas', element: <Ideas /> },
+      {
+        path: '/ideas',
+        element: <Ideas />,
+        loader: async () => {
+          // TEMP: force a route error so you can see RouteError.jsx render
+          throw new Response('Intentional route error', {
+            status: 500,
+            statusText: 'Route failed',
+          })
+        },
+      },
       { path: '/traders', element: <Traders /> },
       { path: '/settings', element: <Settings /> },
       { path: '*', element: <NotFound /> },
