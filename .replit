@@ -29,9 +29,13 @@ localPort = 5000
 externalPort = 80
 
 [[ports]]
-localPort = 45545
+localPort = 38339
 externalPort = 3000
 exposeLocalhost = true
+
+[[ports]]
+localPort = 45297
+externalPort = 3001
 
 [nix]
 channel = "stable-25_05"
