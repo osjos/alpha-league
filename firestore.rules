@@ -1,0 +1,35 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Public read; no client writes in PROD, but in emulator we allow simple seeding + moderation
+    match /traders/{doc} {
+      allow read: if true;
+      // Allow writes in emulator only (no auth check to keep PoC simple)
+      allow write: if true;
+    }
+
+    match /ideas/{doc} {
+      // Read approved for all; owner can read their own pending
+      allow read: if resource.data.status == 'approved'
+        || (request.auth != null && resource.data.submittedByUid == request.auth.uid);
+
+      // Anyone signed-in can create pending ideas
+      allow create: if request.auth != null
+        && request.resource.data.status == 'pending';
+
+      // Simple "moderation" in emulator: any signed-in user can approve -> sets moderatedByUid
+      allow update: if request.auth != null
+        && request.resource.data.status in ['pending', 'approved']
+        && request.resource.data.moderatedByUid == request.auth.uid;
+
+      // Allow deletes in emulator (to clean test data)
+      allow delete: if request.auth != null;
+    }
+
+    // Heartbeat
+    match /healthchecks/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+  }
+}
