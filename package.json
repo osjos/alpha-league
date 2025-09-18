@@ -10,7 +10,8 @@
     "start": "vite",
     "emu": "firebase emulators:start --only firestore,auth",
     "web": "vite --host 0.0.0.0 --port 5000",
-    "dev:emu": "concurrently -k -s first -n EMU,WEB \"npm:emu\" \"npm:web\""
+    "dev:emu": "concurrently -k -s first -n EMU,WEB \"npm:emu\" \"npm:web\"",
+    "dev:auto": "bash -lc 'if [ \"$VITE_USE_EMULATORS\" = \"true\" ]; then npm run dev:emu; else npm run web; fi'"
   },
   "dependencies": {
     "firebase": "^12.2.1",
