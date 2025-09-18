@@ -821,6 +821,11 @@ export default function App() {
       <nav className="w-full border-b bg-white">
         <div className="max-w-5xl mx-auto px-6 py-3 flex items-center gap-4">
           <Link to="/" className="font-semibold">Alpha League</Link>
+          {isEmulator && (
+            <span className="ml-2 text-xs px-2 py-0.5 rounded-full border">
+              Emulator
+            </span>
+          )}
           <div className="ml-auto flex items-center gap-4 text-sm">
             <Link to="/feed" className="hover:underline">Feed</Link>
             <Link to="/submit" className="hover:underline">Submit Idea</Link>
