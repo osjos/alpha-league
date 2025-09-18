@@ -1,0 +1,96 @@
+import { useEffect, useState } from "react";
+import { auth, db, isEmulator } from "../lib/firebase";
+import {
+  collection, query, where, onSnapshot, limit,
+  doc, updateDoc, serverTimestamp
+} from "firebase/firestore";
+
+export default function Admin() {
+  const [pending, setPending] = useState([]);
+  const [busyId, setBusyId] = useState("");
+  const [err, setErr] = useState("");
+
+  const isSignedIn = !!auth.currentUser;
+
+  useEffect(() => {
+    // Only listen when emulator flag is on
+    if (!isEmulator) return;
+    const q = query(
+      collection(db, "ideas"),
+      where("status", "==", "pending"),
+      limit(50)
+    );
+    const unsub = onSnapshot(q, (snap) => {
+      const rows = [];
+      snap.forEach(d => rows.push({ id: d.id, ...d.data() }));
+      // newest first by createdAt
+      rows.sort((a,b) => (b?.createdAt?.seconds||0) - (a?.createdAt?.seconds||0));
+      setPending(rows);
+    }, (e) => setErr(e?.message || String(e)));
+    return () => unsub();
+  }, []);
+
+  const approve = async (id) => {
+    setErr("");
+    if (!isEmulator) { setErr("Admin is emulator-only."); return; }
+    if (!isSignedIn) { setErr("Please sign in first."); return; }
+    try {
+      setBusyId(id);
+      await updateDoc(doc(db, "ideas", id), {
+        status: "approved",
+        moderatedByUid: auth.currentUser.uid,
+        moderatedAt: serverTimestamp(),
+      });
+    } catch (e) {
+      setErr(e?.message || String(e));
+    } finally {
+      setBusyId("");
+    }
+  };
+
+  return (
+    <div className="max-w-5xl mx-auto p-6">
+      <h1 className="text-2xl font-semibold">Admin — Approvals</h1>
+      {!isEmulator && (
+        <div className="mt-2 text-sm text-amber-700">
+          Emulator mode is OFF. This page is read-only (prod rules block updates).
+        </div>
+      )}
+      {!isSignedIn && (
+        <div className="mt-2 text-sm text-amber-700">
+          Please sign in (top-right) to moderate.
+        </div>
+      )}
+      {err && <div className="mt-3 text-sm text-red-600">{err}</div>}
+
+      <div className="mt-6 space-y-3">
+        {pending.length === 0 ? (
+          <div className="text-gray-500">No pending ideas.</div>
+        ) : pending.map(idea => (
+          <div key={idea.id} className="border rounded-2xl p-4">
+            <div className="flex items-center justify-between">
+              <div className="font-medium">
+                {idea.asset} • {idea.direction?.toUpperCase?.()} • {idea.timeframe}
+              </div>
+              <div className="text-xs text-gray-500">
+                by {idea.submittedBy || "—"}
+              </div>
+            </div>
+            <div className="text-sm mt-2">
+              Entry: {idea.entry ?? "—"} • Stop: {idea.stop ?? "—"} • Targets: {(idea.targets||[]).join(", ") || "—"}
+            </div>
+            <div className="mt-3">
+              <button
+                className="border px-3 py-1 rounded-xl hover:bg-gray-50 disabled:opacity-50"
+                onClick={() => approve(idea.id)}
+                disabled={busyId === idea.id || !isEmulator || !isSignedIn}
+              >
+                {busyId === idea.id ? "Approving…" : "Approve"}
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

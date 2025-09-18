@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { auth, db } from "./lib/firebase";
+import { auth, db, isEmulator } from "./lib/firebase";
 import { onAuthStateChanged, signInAnonymously, signOut } from "firebase/auth";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import {
@@ -12,6 +12,7 @@ import {
   addDoc,
 } from "firebase/firestore";
 import IdeaCard from "./components/IdeaCard";
+import Admin from "./pages/Admin.jsx";
 import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
 
 function Landing() {
@@ -792,6 +793,7 @@ export default function App() {
             <Link to="/feed" className="hover:underline">Feed</Link>
             <Link to="/submit" className="hover:underline">Submit Idea</Link>
             <Link to="/leaderboard" className="hover:underline">Leaderboard</Link>
+            {isEmulator && <Link to="/admin" className="hover:underline">Admin</Link>}
 
             <div className="w-px h-5 bg-gray-300 mx-1" />
 
@@ -827,6 +829,7 @@ export default function App() {
         <Route path="/feed" element={<Feed />} />
         <Route path="/submit" element={<SubmitIdea />} />
         <Route path="/leaderboard" element={<Leaderboard />} />
+        <Route path="/admin" element={<Admin />} />
       </Routes>
     </BrowserRouter>
   );
