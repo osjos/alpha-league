@@ -1,6 +1,6 @@
 # Overview
 
-A modern React single-page application built with Vite, featuring Firebase authentication, React Router for navigation, and Tailwind CSS for styling. The project implements a trading/investment platform concept called "Alpha League" with pages for ideas, traders, and user settings. The application includes a complete authentication system with anonymous and Google sign-in options, error boundaries for robust error handling, and a responsive dark-themed UI.
+A modern React single-page application built with Vite featuring a trading platform called "Alpha League". The application allows users to find, submit, and track alpha-generating trading ideas. Built with React Router for navigation and Tailwind CSS for styling, the platform includes a landing page, idea feed, submission form, and leaderboard functionality.
 
 # User Preferences
 
@@ -12,26 +12,24 @@ Preferred communication style: Simple, everyday language.
 - **React 19**: Modern React with latest features and performance improvements
 - **Vite**: Fast build tool and development server with Hot Module Replacement (HMR)
 - **Single Page Application (SPA)**: Client-side routing with React Router DOM v6
-- **Component Structure**: Organized into layouts, pages, components, and contexts directories
-- **Error Handling**: Global ErrorBoundary component for graceful error recovery
+- **Component Structure**: All components defined within App.jsx for simplicity
 
 ## Styling and UI
 - **Tailwind CSS**: Utility-first CSS framework for rapid UI development
-- **Dark Theme**: Consistent slate color palette throughout the application
-- **Responsive Design**: Mobile-first approach with responsive navigation and layouts
+- **Light Theme**: Clean white background with gray accents
+- **Responsive Design**: Mobile-first approach with responsive grids and layouts
 - **PostCSS**: CSS processing with Autoprefixer for cross-browser compatibility
 
-## Authentication System
-- **Firebase Auth**: Handles user authentication and session management
-- **Multiple Sign-in Methods**: Anonymous authentication and Google OAuth
-- **React Context**: AuthContext provides authentication state throughout the app
-- **Environment Configuration**: Firebase config managed through Vite environment variables
+## Application Pages
+- **Landing**: Homepage with platform overview and top 5 leaderboard preview
+- **Feed**: Browse approved trading ideas with filter options (asset, direction, timeframe)
+- **Submit Idea**: Form wizard for submitting new trading ideas
+- **Leaderboard**: Sortable table showing trader statistics (WR, PF, 30d PnL, MDD)
 
 ## Routing Architecture
-- **React Router v6**: Declarative routing with nested routes
-- **Layout System**: RootLayout component provides consistent navigation and footer
-- **Active Link Styling**: Visual indicators for current page navigation
-- **Page Components**: Separate components for Home, Ideas, Traders, and Settings pages
+- **React Router v6**: Simple routing with top-level navigation
+- **Navigation Bar**: Persistent header with Alpha League branding and main navigation links
+- **Direct Routes**: Each page component renders directly without nested layouts
 
 ## Development Environment
 - **ESLint**: Code linting with React-specific rules and hooks validation
@@ -40,9 +38,9 @@ Preferred communication style: Simple, everyday language.
 
 # External Dependencies
 
-## Authentication & Backend
-- **Firebase**: Complete authentication service with multiple provider support
-- **Firebase Auth Domain**: Requires configuration of authorized domains for OAuth
+## Core Framework
+- **React**: Component library for building user interfaces
+- **React Router DOM**: Client-side routing solution
 
 ## Development Tools
 - **Vite**: Build tool and development server
@@ -50,13 +48,18 @@ Preferred communication style: Simple, everyday language.
 - **PostCSS & Autoprefixer**: CSS processing pipeline
 
 ## UI Framework
-- **Tailwind CSS**: Utility-first CSS framework
-- **React Router DOM**: Client-side routing solution
+- **Tailwind CSS**: Utility-first CSS framework for styling
 
-## Environment Configuration
-- Requires Firebase configuration through Replit Secrets:
-  - `VITE_FIREBASE_API_KEY`
-  - `VITE_FIREBASE_AUTH_DOMAIN` 
-  - `VITE_FIREBASE_PROJECT_ID`
-  - `VITE_FIREBASE_APP_ID`
-  - Additional optional Firebase services (Storage, Messaging, Analytics)
+# Project Structure
+
+## Main Application
+- `src/App.jsx`: Main application component with routing and all page components
+- `src/main.jsx`: Application entry point
+- `src/index.css`: Tailwind CSS imports and base styles
+
+## Trading Platform Features
+- Landing page with platform introduction and leaderboard preview
+- Feed page for browsing trading ideas with filtering capabilities
+- Submit page for new idea submission form wizard
+- Leaderboard page with trader performance metrics
+- Responsive navigation with clean, professional design
