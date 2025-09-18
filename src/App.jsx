@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { auth } from "./lib/firebase";
+import { auth, db } from "./lib/firebase";
 import { onAuthStateChanged, signInAnonymously, signOut } from "firebase/auth";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
 
 function Landing() {
@@ -117,6 +118,24 @@ export default function App() {
     });
     return () => unsub();
   }, []);
+
+  useEffect(() => {
+    const writeHeartbeat = async () => {
+      if (!user) return;
+      try {
+        await setDoc(
+          doc(db, "healthchecks", user.uid),
+          { ts: serverTimestamp(), source: "web" },
+          { merge: true }
+        );
+        // eslint-disable-next-line no-console
+        console.log("✅ Firestore heartbeat written");
+      } catch (e) {
+        console.warn("⚠️ Firestore write failed (likely rules):", e?.message || e);
+      }
+    };
+    writeHeartbeat();
+  }, [user]);
 
   return (
     <BrowserRouter>
