@@ -8,7 +8,9 @@ import {
   orderBy,
   limit,
   onSnapshot,
+  where,
 } from "firebase/firestore";
+import IdeaCard from "./components/IdeaCard";
 import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
 
 function Landing() {
@@ -119,27 +121,180 @@ function Landing() {
 }
 
 function Feed() {
+  const [ideas, setIdeas] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [seedBusy, setSeedBusy] = useState(false);
+  const [seedErr, setSeedErr] = useState("");
+
+  // Filters
+  const [asset, setAsset] = useState("all");
+  const [direction, setDirection] = useState("all");
+  const [timeframe, setTimeframe] = useState("all");
+
+  // Subscribe to approved ideas (limit to 50 to avoid heavy reads)
+  useEffect(() => {
+    setLoading(true);
+    const q = query(
+      collection(db, "ideas"),
+      where("status", "==", "approved"),
+      limit(50)
+    );
+
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        const rows = [];
+        snap.forEach((d) => rows.push({ id: d.id, ...d.data() }));
+        // sort newest first by createdAt (client-side to avoid composite index for now)
+        rows.sort((a, b) => {
+          const ta = a.createdAt?.seconds || 0;
+          const tb = b.createdAt?.seconds || 0;
+          return tb - ta;
+        });
+        setIdeas(rows);
+        setLoading(false);
+      },
+      (err) => {
+        console.warn("Feed listen failed:", err?.message || err);
+        setLoading(false);
+      }
+    );
+    return () => unsub();
+  }, []);
+
+  // Build dropdown options from data
+  const assetOptions = ["all", ...Array.from(new Set(ideas.map(i => i.asset))).filter(Boolean)];
+  const timeframeOptions = ["all", ...Array.from(new Set(ideas.map(i => i.timeframe))).filter(Boolean)];
+  const directionOptions = ["all", "long", "short"];
+
+  // Apply filters client-side
+  const filtered = ideas.filter((i) => {
+    if (asset !== "all" && i.asset !== asset) return false;
+    if (direction !== "all" && i.direction !== direction) return false;
+    if (timeframe !== "all" && i.timeframe !== timeframe) return false;
+    return true;
+  });
+
+  // Temporary: seed a few approved ideas
+  const seedIdeas = async () => {
+    setSeedBusy(true);
+    setSeedErr("");
+    try {
+      const examples = [
+        {
+          id: "i_btc_long_4h",
+          asset: "BTCUSDT",
+          direction: "long",
+          timeframe: "4h",
+          entry: 60000,
+          stop: 58800,
+          targets: [61000, 61800, 63000],
+          submittedBy: "Alfa",
+          status: "approved",
+        },
+        {
+          id: "i_eth_short_1h",
+          asset: "ETHUSDT",
+          direction: "short",
+          timeframe: "1h",
+          entry: 2400,
+          stop: 2460,
+          targets: [2350, 2320],
+          submittedBy: "Charlie",
+          status: "approved",
+        },
+        {
+          id: "i_sol_long_1d",
+          asset: "SOLUSDT",
+          direction: "long",
+          timeframe: "1d",
+          entry: 150,
+          stop: 142,
+          targets: [158, 165, 175],
+          submittedBy: "Echo",
+          status: "approved",
+        },
+      ];
+
+      for (const ex of examples) {
+        await setDoc(doc(db, "ideas", ex.id), {
+          asset: ex.asset,
+          direction: ex.direction,     // "long" | "short"
+          timeframe: ex.timeframe,     // e.g. "1h" | "4h" | "1d"
+          entry: ex.entry,             // number
+          stop: ex.stop,               // number
+          targets: ex.targets,         // number[]
+          submittedBy: ex.submittedBy, // display name
+          status: ex.status,           // "approved" | "pending" | "rejected"
+          createdAt: serverTimestamp(),
+        }, { merge: true });
+      }
+    } catch (e) {
+      setSeedErr(e?.message || String(e));
+    } finally {
+      setSeedBusy(false);
+    }
+  };
+
   return (
     <div className="max-w-5xl mx-auto p-6">
       <h1 className="text-2xl font-semibold">Feed</h1>
-      <p className="text-gray-600 mt-2">Approved ideas with filters (asset, direction, timeframe).</p>
+      <p className="text-gray-600 mt-2">
+        Approved ideas with filters (asset, direction, timeframe).
+      </p>
 
-      {/* Filters placeholder */}
+      {/* Seed helper, only if no ideas */}
+      {ideas.length === 0 && (
+        <div className="mt-4">
+          <button
+            onClick={seedIdeas}
+            disabled={seedBusy}
+            className="border px-3 py-1 rounded-xl hover:bg-gray-50 text-sm"
+          >
+            {seedBusy ? "Seeding…" : "Seed sample ideas"}
+          </button>
+          {seedErr && <div className="text-sm text-red-600 mt-1">{seedErr}</div>}
+        </div>
+      )}
+
+      {/* Filters */}
       <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <select className="border rounded-xl p-2"><option>Asset: All</option></select>
-        <select className="border rounded-xl p-2"><option>Direction: All</option></select>
-        <select className="border rounded-xl p-2"><option>Timeframe: All</option></select>
+        <select
+          className="border rounded-xl p-2"
+          value={asset}
+          onChange={(e) => setAsset(e.target.value)}
+        >
+          {assetOptions.map(opt => <option key={opt} value={opt}>Asset: {opt}</option>)}
+        </select>
+
+        <select
+          className="border rounded-xl p-2"
+          value={direction}
+          onChange={(e) => setDirection(e.target.value)}
+        >
+          {directionOptions.map(opt => <option key={opt} value={opt}>Direction: {opt}</option>)}
+        </select>
+
+        <select
+          className="border rounded-xl p-2"
+          value={timeframe}
+          onChange={(e) => setTimeframe(e.target.value)}
+        >
+          {timeframeOptions.map(opt => <option key={opt} value={opt}>Timeframe: {opt}</option>)}
+        </select>
       </div>
 
-      {/* Idea cards placeholder */}
-      <div className="mt-6 space-y-3">
-        {[1,2,3].map((i) => (
-          <div key={i} className="border rounded-2xl p-4">
-            <div className="font-medium">BTCUSDT • Long</div>
-            <div className="text-sm text-gray-600">4h timeframe • Submitted by Trader {i}</div>
-            <div className="text-sm mt-2">Entry: -- • Stop: -- • Targets: --</div>
+      {/* Results */}
+      <div className="mt-6">
+        {loading ? (
+          <div className="text-gray-500">Loading…</div>
+        ) : filtered.length === 0 ? (
+          <div className="text-gray-500">No ideas match the filters.</div>
+        ) : (
+          <div className="space-y-3">
+            {filtered.map((idea) => <IdeaCard key={idea.id} idea={idea} />)}
           </div>
-        ))}
+        )}
       </div>
     </div>
   );
