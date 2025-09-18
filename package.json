@@ -1,5 +1,5 @@
 {
-  "name": "workspace",
+  "name": "alpha-league-root",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -7,7 +7,10 @@
     "dev": "vite",
     "preview": "vite preview",
     "build": "vite build",
-    "start": "vite"
+    "start": "vite",
+    "emu": "npx firebase emulators:start --only firestore,auth",
+    "web": "vite --host 0.0.0.0 --port 5000",
+    "dev:emu": "npx concurrently -k -s first -n EMU,WEB \"npm:emu\" \"npm:web\""
   },
   "dependencies": {
     "firebase": "^12.2.1",
@@ -22,6 +25,7 @@
     "@types/react-dom": "^19.1.7",
     "@vitejs/plugin-react": "^5.0.0",
     "autoprefixer": "^10.4.21",
+    "concurrently": "^9.2.1",
     "eslint": "^9.33.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
