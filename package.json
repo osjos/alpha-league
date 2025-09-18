@@ -8,9 +8,9 @@
     "preview": "vite preview",
     "build": "vite build",
     "start": "vite",
-    "emu": "npx firebase emulators:start --only firestore,auth",
+    "emu": "firebase emulators:start --only firestore,auth",
     "web": "vite --host 0.0.0.0 --port 5000",
-    "dev:emu": "npx concurrently -k -s first -n EMU,WEB \"npm:emu\" \"npm:web\""
+    "dev:emu": "concurrently -k -s first -n EMU,WEB \"npm:emu\" \"npm:web\""
   },
   "dependencies": {
     "firebase": "^12.2.1",
