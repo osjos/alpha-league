@@ -1,0 +1,138 @@
+Add a global React ErrorBoundary
+
+Create src/components/ErrorBoundary.jsx:
+
+import React from 'react'
+
+export default class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props)
+    this.state = { hasError: false, error: null }
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error }
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error('ErrorBoundary caught', error, errorInfo)
+  }
+  handleReset = () => this.setState({ hasError: false, error: null })
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-slate-900 text-slate-100 flex items-center justify-center p-6">
+          <div className="max-w-lg w-full rounded-2xl border border-red-800 p-6">
+            <h1 className="text-xl font-semibold text-red-300 mb-2">Something went wrong</h1>
+            <p className="text-slate-300 text-sm mb-4">
+              {String(this.state.error?.message || this.state.error)}
+            </p>
+            <button
+              onClick={this.handleReset}
+              className="rounded-lg bg-slate-700 px-3 py-2 text-sm font-medium hover:bg-slate-600"
+            >
+              Try again
+            </button>
+          </div>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
+
+
+Wrap your app with it. Open src/main.jsx and update the render:
+
+// ...existing imports...
+import { AuthProvider } from './contexts/AuthContext.jsx'
+import ErrorBoundary from './components/ErrorBoundary.jsx'
+
+// ...router definition stays the same...
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <ErrorBoundary>
+      <AuthProvider>
+        <RouterProvider router={router} />
+      </AuthProvider>
+    </ErrorBoundary>
+  </React.StrictMode>,
+)
+
+2) Add a route-level error element
+
+Create src/pages/RouteError.jsx:
+
+import { useRouteError, isRouteErrorResponse, Link } from 'react-router-dom'
+
+export default function RouteError() {
+  const err = useRouteError()
+  let title = 'Unexpected error'
+  let message = ''
+  let status = ''
+
+  if (isRouteErrorResponse(err)) {
+    status = err.status
+    title = err.statusText || title
+    message = (err.data && (err.data.message || err.data)) || ''
+  } else if (err instanceof Error) {
+    message = err.message
+  } else if (err) {
+    message = String(err)
+  }
+
+  return (
+    <section className="rounded-2xl border border-red-800 p-6">
+      <h1 className="text-xl font-semibold text-red-300 mb-2">
+        {title} {status ? `(${status})` : ''}
+      </h1>
+      {message && <p className="text-slate-300 mb-4">{message}</p>}
+      <Link to="/" className="underline">Go home</Link>
+    </section>
+  )
+}
+
+
+Wire it to the top route in src/main.jsx:
+
+import RouteError from './pages/RouteError.jsx'
+
+// ...
+
+const router = createBrowserRouter([
+  {
+    element: <RootLayout />,
+    errorElement: <RouteError />,   // ← add this
+    children: [
+      { path: '/', element: <Home /> },
+      { path: '/ideas', element: <Ideas /> },
+      { path: '/traders', element: <Traders /> },
+      { path: '/settings', element: <Settings /> },
+      { path: '*', element: <NotFound /> },
+    ],
+  },
+])
+
+3) Quick test button to trigger an error (proves boundary works)
+
+Open src/pages/Home.jsx and temporarily add a crash toggle:
+
+import { useState } from 'react'
+
+export default function Home() {
+  const [boom, setBoom] = useState(false)
+  if (boom) throw new Error('Intentional crash for testing')
+
+  return (
+    <section className="rounded-2xl border border-slate-800 p-6 space-y-3">
+      <h1 className="text-xl font-semibold">Home</h1>
+      <p className="text-slate-300">Welcome. Use the nav to test client-side routing.</p>
+      <button
+        className="rounded-lg bg-rose-700 px-3 py-2 text-sm font-medium hover:bg-rose-600"
+        onClick={() => setBoom(true)}
+        title="Triggers a render-time error to test the ErrorBoundary"
+      >
+        Trigger error boundary
+      </button>
+    </section>
+  )
+}

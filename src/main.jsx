@@ -10,10 +10,13 @@ import Traders from './pages/Traders.jsx'
 import Settings from './pages/Settings.jsx'
 import NotFound from './pages/NotFound.jsx'
 import { AuthProvider } from './contexts/AuthContext.jsx'
+import ErrorBoundary from './components/ErrorBoundary.jsx'
+import RouteError from './pages/RouteError.jsx'
 
 const router = createBrowserRouter([
   {
     element: <RootLayout />,
+    errorElement: <RouteError />,
     children: [
       { path: '/', element: <Home /> },
       { path: '/ideas', element: <Ideas /> },
@@ -26,8 +29,10 @@ const router = createBrowserRouter([
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <AuthProvider>
-      <RouterProvider router={router} />
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <RouterProvider router={router} />
+      </AuthProvider>
+    </ErrorBoundary>
   </React.StrictMode>,
 )
