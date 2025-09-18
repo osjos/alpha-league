@@ -1,0 +1,146 @@
+Step 5D — Leaderboard: table + sortable columns
+
+Open web/src/App.jsx. At the top with your other Firebase imports, make sure these exist (add if missing):
+
+import {
+  collection,
+  query,
+  onSnapshot,
+  limit,
+} from "firebase/firestore";
+
+
+Replace the entire Leaderboard() component with this:
+
+function Leaderboard() {
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // sortKey: 'trader' | 'wr' | 'pf' | 'pnl30d' | 'mdd'
+  const [sortKey, setSortKey] = useState("pnl30d");
+  const [sortDir, setSortDir] = useState("desc"); // 'asc' | 'desc'
+
+  useEffect(() => {
+    // Subscribe to up to 100 traders; client-side sort keeps indexes simple for now
+    const q = query(collection(db, "traders"), limit(100));
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        const out = [];
+        snap.forEach((d) => out.push({ id: d.id, ...d.data() }));
+        setRows(out);
+        setLoading(false);
+      },
+      (err) => {
+        console.warn("Leaderboard listen failed:", err?.message || err);
+        setLoading(false);
+      }
+    );
+    return () => unsub();
+  }, []);
+
+  const arrow = (k) => (sortKey === k ? (sortDir === "asc" ? "▲" : "▼") : "");
+
+  const toggleSort = (k) => {
+    if (sortKey === k) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(k);
+      // sensible defaults: strings asc, metrics desc
+      setSortDir(k === "trader" ? "asc" : "desc");
+    }
+  };
+
+  const sorted = [...rows].sort((a, b) => {
+    if (sortKey === "trader") {
+      const as = (a.displayName || "").toString();
+      const bs = (b.displayName || "").toString();
+      return sortDir === "asc" ? as.localeCompare(bs) : bs.localeCompare(as);
+    }
+    // numeric fields
+    const pick = (r) => {
+      const s = r.stats || {};
+      if (sortKey === "wr") return Number(s.wr);
+      if (sortKey === "pf") return Number(s.pf);
+      if (sortKey === "pnl30d") return Number(s.pnl30d);
+      if (sortKey === "mdd") return Number(s.mdd); // usually negative; "less negative" is better → we'll use 'desc'
+      return NaN;
+    };
+    const av = pick(a);
+    const bv = pick(b);
+    const aok = Number.isFinite(av);
+    const bok = Number.isFinite(bv);
+    if (!aok && !bok) return 0;
+    if (!aok) return 1; // missing -> bottom
+    if (!bok) return -1;
+    return sortDir === "asc" ? av - bv : bv - av;
+  });
+
+  const fmt0 = (n) => (Number.isFinite(n) ? `${n.toFixed(0)}%` : "—");
+  const fmt1 = (n) => (Number.isFinite(n) ? `${n.toFixed(1)}%` : "—");
+  const fmtPF = (n) => (Number.isFinite(n) ? n.toFixed(2) : "—");
+
+  return (
+    <div className="max-w-5xl mx-auto p-6">
+      <h1 className="text-2xl font-semibold">Leaderboard</h1>
+      <p className="text-gray-600 mt-2">
+        Click a column to sort. Default is 30d PnL (desc).
+      </p>
+
+      <div className="mt-6 overflow-x-auto">
+        <table className="min-w-full text-sm">
+          <thead>
+            <tr className="text-left border-b">
+              <th className="py-2 pr-4">
+                <button onClick={() => toggleSort("trader")} className="flex items-center gap-1">
+                  Trader <span className="text-gray-500">{arrow("trader")}</span>
+                </button>
+              </th>
+              <th className="py-2 pr-4">
+                <button onClick={() => toggleSort("wr")} className="flex items-center gap-1">
+                  WR <span className="text-gray-500">{arrow("wr")}</span>
+                </button>
+              </th>
+              <th className="py-2 pr-4">
+                <button onClick={() => toggleSort("pf")} className="flex items-center gap-1">
+                  PF <span className="text-gray-500">{arrow("pf")}</span>
+                </button>
+              </th>
+              <th className="py-2 pr-4">
+                <button onClick={() => toggleSort("pnl30d")} className="flex items-center gap-1">
+                  30d PnL <span className="text-gray-500">{arrow("pnl30d")}</span>
+                </button>
+              </th>
+              <th className="py-2 pr-4">
+                <button onClick={() => toggleSort("mdd")} className="flex items-center gap-1">
+                  MDD <span className="text-gray-500">{arrow("mdd")}</span>
+                </button>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr><td className="py-4 text-gray-500" colSpan={5}>Loading…</td></tr>
+            ) : sorted.length === 0 ? (
+              <tr>
+                <td className="py-4 text-gray-500" colSpan={5}>
+                  No traders found. Go to the Landing page and click “Seed sample traders”.
+                </td>
+              </tr>
+            ) : (
+              sorted.map((t) => (
+                <tr key={t.id} className="border-b">
+                  <td className="py-2 pr-4 font-medium">{t.displayName || "—"}</td>
+                  <td className="py-2 pr-4">{fmt0(t.stats?.wr)}</td>
+                  <td className="py-2 pr-4">{fmtPF(t.stats?.pf)}</td>
+                  <td className="py-2 pr-4">{fmt1(t.stats?.pnl30d)}</td>
+                  <td className="py-2 pr-4">{fmt1(t.stats?.mdd)}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
