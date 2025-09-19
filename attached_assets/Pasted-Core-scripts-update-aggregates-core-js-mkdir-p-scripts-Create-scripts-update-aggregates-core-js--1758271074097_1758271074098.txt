@@ -1,0 +1,175 @@
+Core: scripts/update_aggregates_core.js
+mkdir -p scripts
+
+
+Create scripts/update_aggregates_core.js:
+
+// scripts/update_aggregates_core.js
+// Recompute idea-level PnL and simple R-multiple, then refresh trader stats.
+
+const admin = require("firebase-admin");
+
+function initFirebaseAdmin() {
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY
+    ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n")
+    : undefined;
+
+  if (!projectId || !clientEmail || !privateKey) {
+    throw new Error("Missing FIREBASE_* secrets");
+  }
+  if (admin.apps.length === 0) {
+    admin.initializeApp({
+      credential: admin.credential.cert({ projectId, clientEmail, privateKey }),
+    });
+  }
+  return admin.firestore();
+}
+
+function toFixed(n, d=6) {
+  return +Number(n).toFixed(d);
+}
+
+function computeIdeaMetrics(idea, price) {
+  const entry = Number(idea.entry_price);
+  const qty = Number(idea.qty || 0);
+  const last = Number(price);
+  const side = idea.side || "LONG";
+
+  if (!entry || !qty || !last || Number.isNaN(entry) || Number.isNaN(qty) || Number.isNaN(last)) {
+    return null; // skip broken data
+  }
+
+  const diff = side === "SHORT" ? (entry - last) : (last - entry);
+  const pnl_unrealized = toFixed(diff * qty, 2);
+
+  const notional_usd = Number(idea.notional_usd || entry * qty);
+  const risk_usd = Number(idea.risk_usd || notional_usd * 0.02);
+  const r_multiple_unrealized = risk_usd > 0 ? toFixed(pnl_unrealized / risk_usd, 4) : 0;
+
+  // Optional convenience flags (don’t flip status here)
+  let hit_stop = false, hit_target = false;
+  if (idea.stop) {
+    hit_stop = (side === "LONG") ? last <= Number(idea.stop) : last >= Number(idea.stop);
+  }
+  if (idea.target) {
+    hit_target = (side === "LONG") ? last >= Number(idea.target) : last <= Number(idea.target);
+  }
+
+  return {
+    last_price: toFixed(last),
+    pnl_unrealized,
+    r_multiple_unrealized,
+    hit_stop,
+    hit_target,
+  };
+}
+
+async function tickUpdateAggregates({ log = console.log } = {}) {
+  const db = initFirebaseAdmin();
+  const now = admin.firestore.FieldValue.serverTimestamp();
+
+  // 1) Load all prices into a map
+  const pricesSnap = await db.collection("prices").get();
+  if (pricesSnap.empty) {
+    log("No prices found; run seed or price updater first.");
+    return { updatedIdeas: 0, updatedTraders: 0 };
+  }
+  const priceMap = new Map();
+  pricesSnap.forEach(doc => {
+    const d = doc.data();
+    if (d && d.symbol && (typeof d.price === "number" || typeof d.price === "string")) {
+      priceMap.set(d.symbol, Number(d.price));
+    }
+  });
+
+  // 2) Load OPEN ideas
+  const ideasSnap = await db.collection("ideas").where("status", "==", "OPEN").get();
+  if (ideasSnap.empty) {
+    log("No OPEN ideas to update.");
+  }
+
+  // 3) Compute updates & collect trader aggregates
+  let updatedIdeas = 0;
+  const ideaBatches = [];
+  let batch = db.batch();
+  let ops = 0;
+
+  // Trader aggregates
+  const traderAgg = new Map(); // traderId -> { sumPnl, rSum, rCnt }
+
+  ideasSnap.forEach(doc => {
+    const idea = doc.data();
+    const mktPrice = priceMap.get(idea.symbol);
+    if (!mktPrice) return; // no price → skip
+
+    const calc = computeIdeaMetrics(idea, mktPrice);
+    if (!calc) return;
+
+    batch.update(doc.ref, {
+      last_price: calc.last_price,
+      pnl_unrealized: calc.pnl_unrealized,
+      r_multiple_unrealized: calc.r_multiple_unrealized,
+      hit_stop: calc.hit_stop,
+      hit_target: calc.hit_target,
+      updated_at: now,
+      price_source: "mock", // keeps consistent with your price updater
+    });
+    updatedIdeas++;
+    ops++;
+
+    // Aggregate into trader
+    const tid = idea.traderId;
+    if (tid) {
+      const prev = traderAgg.get(tid) || { sumPnl: 0, rSum: 0, rCnt: 0 };
+      prev.sumPnl += Number(calc.pnl_unrealized);
+      prev.rSum += Number(calc.r_multiple_unrealized);
+      prev.rCnt += 1;
+      traderAgg.set(tid, prev);
+    }
+
+    // Batch chunking (Firestore limit 500)
+    if (ops >= 450) {
+      ideaBatches.push(batch);
+      batch = db.batch();
+      ops = 0;
+    }
+  });
+
+  if (ops > 0) ideaBatches.push(batch);
+  for (const b of ideaBatches) await b.commit();
+
+  // 4) Write trader stats
+  let updatedTraders = 0;
+  const traderBatches = [];
+  batch = db.batch();
+  ops = 0;
+
+  for (const [traderId, agg] of traderAgg.entries()) {
+    const avgR = agg.rCnt > 0 ? +(agg.rSum / agg.rCnt).toFixed(4) : 0;
+    const ref = db.collection("traders").doc(traderId);
+    batch.set(ref, {
+      stats: {
+        total_pnl: +agg.sumPnl.toFixed(2),
+        r_multiple_avg: avgR,
+        // leave other stats as-is
+      },
+      updated_at: now,
+    }, { merge: true });
+    updatedTraders++;
+    ops++;
+    if (ops >= 450) {
+      traderBatches.push(batch);
+      batch = db.batch();
+      ops = 0;
+    }
+  }
+  if (ops > 0) traderBatches.push(batch);
+  for (const b of traderBatches) await b.commit();
+
+  log(`Ideas updated: ${updatedIdeas}, Traders updated: ${updatedTraders}`);
+  return { updatedIdeas, updatedTraders };
+}
+
+module.exports = { tickUpdateAggregates };
