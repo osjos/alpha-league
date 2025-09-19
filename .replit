@@ -42,21 +42,21 @@ outputType = "console"
 
 [[ports]]
 localPort = 3001
-externalPort = 3001
+externalPort = 3002
 
 [[ports]]
-localPort = 32857
-externalPort = 3003
+localPort = 5000
+externalPort = 80
+
+[[ports]]
+localPort = 40303
+externalPort = 3001
 exposeLocalhost = true
 
 [[ports]]
 localPort = 41949
 externalPort = 3000
 exposeLocalhost = true
-
-[[ports]]
-localPort = 8080
-externalPort = 8080
 
 [nix]
 channel = "stable-25_05"
