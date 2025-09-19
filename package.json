@@ -13,10 +13,14 @@
     "dev:emu": "concurrently -k -s first -n EMU,WEB \"npm:emu\" \"npm:web\"",
     "dev:auto": "bash -lc 'if [ \"$VITE_USE_EMULATORS\" = \"true\" ]; then npm run dev:emu; else npm run web; fi'",
     "seed:traders-ideas": "node scripts/seed.js",
-    "update:prices:once": "node scripts/update_prices_once.js"
+    "update:prices:once": "node scripts/update_prices_once.js",
+    "server": "node server.js",
+    "dev:server": "node server.js"
   },
   "dependencies": {
     "@faker-js/faker": "^10.0.0",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
     "firebase": "^12.2.1",
     "firebase-admin": "^13.5.0",
     "react": "^19.1.1",
