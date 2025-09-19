@@ -38,3 +38,12 @@ app.listen(PORT, "0.0.0.0", () => {
   console.log(`Health check: http://localhost:${PORT}/health`);
   console.log(`Price update endpoint: POST /cron/update-prices`);
 });
+
+// Optional: dev-only background loop (disable in prod)
+const PRICE_UPDATE_MS = +(process.env.PRICE_UPDATE_MS || 0); // e.g., 60000 for 1 min
+if (PRICE_UPDATE_MS > 0) {
+  console.log(`Dev loop: updating prices every ${PRICE_UPDATE_MS} ms`);
+  setInterval(() => {
+    tickUpdatePrices().catch(e => console.error("Loop update error:", e));
+  }, PRICE_UPDATE_MS);
+}
