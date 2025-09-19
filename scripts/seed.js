@@ -2,8 +2,8 @@
 // Run with: npm run seed:traders-ideas
 // Requires secrets: FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY
 
-const admin = require("firebase-admin");
-const { faker } = require("@faker-js/faker");
+import admin from "firebase-admin";
+import { faker } from "@faker-js/faker";
 
 function initFirebaseAdmin() {
   const projectId = process.env.FIREBASE_PROJECT_ID;
@@ -64,7 +64,7 @@ function makeTraders(n = 10) {
   const traders = [];
   for (let i = 0; i < n; i++) {
     const name = faker.person.fullName();
-    const handle = "@" + slugify(faker.internet.userName().slice(0, 10));
+    const handle = "@" + slugify(faker.internet.username().slice(0, 10));
     const id = slugify(`${name}-${faker.string.alphanumeric(4)}`);
     traders.push({
       id,
