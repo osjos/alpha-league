@@ -48,11 +48,27 @@ app.post("/cron/update-aggregates", async (req, res) => {
   }
 });
 
+// Combined endpoint: updates prices then aggregates in sequence
+app.post("/cron/tick", async (req, res) => {
+  try {
+    if (!process.env.CRON_TOKEN || req.headers["x-cron-token"] !== process.env.CRON_TOKEN) {
+      return res.status(401).json({ ok: false, error: "Unauthorized" });
+    }
+    const prices = await tickUpdatePrices();
+    const aggs   = await tickUpdateAggregates();
+    return res.json({ ok: true, prices, aggs });
+  } catch (e) {
+    console.error("Cron tick error:", e);
+    return res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 API Server running on port ${PORT}`);
   console.log(`Health check: http://localhost:${PORT}/health`);
   console.log(`Price update endpoint: POST /cron/update-prices`);
   console.log(`Aggregates update endpoint: POST /cron/update-aggregates`);
+  console.log(`Combined tick endpoint: POST /cron/tick`);
 });
 
 // Optional: dev-only background loop (disable in prod)
