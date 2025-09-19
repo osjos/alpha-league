@@ -12,7 +12,8 @@
     "web": "vite --host 0.0.0.0 --port 5000",
     "dev:emu": "concurrently -k -s first -n EMU,WEB \"npm:emu\" \"npm:web\"",
     "dev:auto": "bash -lc 'if [ \"$VITE_USE_EMULATORS\" = \"true\" ]; then npm run dev:emu; else npm run web; fi'",
-    "seed:traders-ideas": "node scripts/seed.js"
+    "seed:traders-ideas": "node scripts/seed.js",
+    "update:prices:once": "node scripts/update_prices_once.js"
   },
   "dependencies": {
     "@faker-js/faker": "^10.0.0",
