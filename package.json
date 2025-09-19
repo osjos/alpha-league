@@ -11,11 +11,13 @@
     "emu": "firebase emulators:start --only firestore,auth",
     "web": "vite --host 0.0.0.0 --port 5000",
     "dev:emu": "concurrently -k -s first -n EMU,WEB \"npm:emu\" \"npm:web\"",
-    "dev:auto": "bash -lc 'if [ \"$VITE_USE_EMULATORS\" = \"true\" ]; then npm run dev:emu; else npm run web; fi'"
+    "dev:auto": "bash -lc 'if [ \"$VITE_USE_EMULATORS\" = \"true\" ]; then npm run dev:emu; else npm run web; fi'",
+    "seed:traders-ideas": "node scripts/seed.js"
   },
   "dependencies": {
     "@faker-js/faker": "^10.0.0",
     "firebase": "^12.2.1",
+    "firebase-admin": "^13.5.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-router-dom": "^6.30.1",
