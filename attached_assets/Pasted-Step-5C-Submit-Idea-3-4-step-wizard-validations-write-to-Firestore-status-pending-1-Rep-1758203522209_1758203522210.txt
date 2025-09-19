@@ -1,0 +1,340 @@
+Step 5C — Submit Idea: 3–4 step wizard + validations + write to Firestore (status: "pending")
+1) Replace the SubmitIdea() component in web/src/App.jsx
+
+Open web/src/App.jsx, find the function SubmitIdea() { ... }, delete it, and paste this version:
+
+function SubmitIdea() {
+  const [step, setStep] = useState(1);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const [okMsg, setOkMsg] = useState("");
+
+  // Draft form state
+  const [draft, setDraft] = useState({
+    asset: "",
+    direction: "long",      // "long" | "short"
+    timeframe: "4h",        // "1h" | "4h" | "1d" | "1w"
+    entry: "",
+    stop: "",
+    targetsInput: "",       // comma separated, e.g. "61000, 61800, 63000"
+    skin: false,
+    notes: "",
+  });
+
+  // Helpers
+  const isSignedIn = !!auth.currentUser;
+
+  const parseNum = (v) => {
+    const n = typeof v === "string" ? parseFloat(v.trim().replace(",", ".")) : Number(v);
+    return Number.isFinite(n) ? n : NaN;
+  };
+
+  const parseTargets = (s) => {
+    if (!s || typeof s !== "string") return [];
+    return s.split(",")
+      .map(x => parseNum(x))
+      .filter(n => Number.isFinite(n));
+  };
+
+  // --- Validations ---
+  const validateStep1 = () => {
+    const errors = [];
+    if (!draft.asset || !draft.asset.trim()) errors.push("Asset is required (e.g., BTCUSDT).");
+    if (!["long","short"].includes(draft.direction)) errors.push("Direction must be long or short.");
+    if (!["1h","4h","1d","1w"].includes(draft.timeframe)) errors.push("Pick a valid timeframe.");
+    return errors;
+  };
+
+  const validateStep2 = () => {
+    const errors = [];
+    const entry = parseNum(draft.entry);
+    const stop  = parseNum(draft.stop);
+    const targets = parseTargets(draft.targetsInput);
+
+    if (!Number.isFinite(entry)) errors.push("Entry must be a number.");
+    if (!Number.isFinite(stop))  errors.push("Stop must be a number.");
+    if (!targets.length)         errors.push("At least one target is required (comma-separated).");
+
+    if (Number.isFinite(entry) && Number.isFinite(stop)) {
+      if (draft.direction === "long" && !(stop < entry)) {
+        errors.push("For LONG, Stop must be LESS than Entry.");
+      }
+      if (draft.direction === "short" && !(stop > entry)) {
+        errors.push("For SHORT, Stop must be GREATER than Entry.");
+      }
+    }
+
+    if (targets.length) {
+      if (draft.direction === "long" && targets.some(t => !(t > parseNum(draft.entry)))) {
+        errors.push("For LONG, all Targets must be GREATER than Entry.");
+      }
+      if (draft.direction === "short" && targets.some(t => !(t < parseNum(draft.entry)))) {
+        errors.push("For SHORT, all Targets must be LESS than Entry.");
+      }
+    }
+    return errors;
+  };
+
+  const validateStep3 = () => {
+    const errors = [];
+    if (!draft.skin) errors.push("You must confirm you have skin in the game.");
+    return errors;
+  };
+
+  const next = () => {
+    setErr("");
+    let errors = [];
+    if (step === 1) errors = validateStep1();
+    if (step === 2) errors = validateStep2();
+    if (step === 3) errors = validateStep3();
+    if (errors.length) { setErr(errors.join(" ")); return; }
+    setStep((s) => Math.min(4, s + 1));
+  };
+
+  const back = () => {
+    setErr("");
+    setStep((s) => Math.max(1, s - 1));
+  };
+
+  const submit = async () => {
+    setErr("");
+    setOkMsg("");
+    const allErrs = [...validateStep1(), ...validateStep2(), ...validateStep3()];
+    if (allErrs.length) { setErr(allErrs.join(" ")); return; }
+    if (!isSignedIn) { setErr("Please sign in (top-right) before submitting."); return; }
+
+    const entry = parseNum(draft.entry);
+    const stop  = parseNum(draft.stop);
+    const targets = parseTargets(draft.targetsInput);
+
+    const payload = {
+      asset: (draft.asset || "").toUpperCase().trim(),
+      direction: draft.direction,
+      timeframe: draft.timeframe,
+      entry,
+      stop,
+      targets,
+      notes: draft.notes?.trim() || "",
+      status: "pending", // pending -> (manual approve later)
+      submittedByUid: auth.currentUser?.uid || null,
+      submittedBy: auth.currentUser?.isAnonymous ? "anon" : (auth.currentUser?.displayName || "anon"),
+      createdAt: serverTimestamp(),
+    };
+
+    try {
+      setBusy(true);
+      await addDoc(collection(db, "ideas"), payload);
+      setOkMsg("✅ Idea submitted! It’s now pending approval.");
+      // reset the form, keep direction/timeframe for convenience
+      setDraft((d) => ({
+        ...d,
+        asset: "",
+        entry: "",
+        stop: "",
+        targetsInput: "",
+        notes: "",
+        skin: false,
+      }));
+      setStep(1);
+    } catch (e) {
+      setErr(e?.message || String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (!isSignedIn) {
+    return (
+      <div className="max-w-3xl mx-auto p-6">
+        <h1 className="text-2xl font-semibold">Submit Idea</h1>
+        <p className="text-gray-600 mt-2">Please sign in (top-right) to submit an idea.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-3xl mx-auto p-6">
+      <h1 className="text-2xl font-semibold">Submit Idea</h1>
+      <p className="text-gray-600 mt-2">3–4 step wizard with validation & “skin in the game”.</p>
+
+      {/* Stepper */}
+      <div className="flex items-center gap-2 mt-4 text-sm">
+        {[1,2,3,4].map(n => (
+          <div key={n} className={`px-3 py-1 rounded-full border ${n===step ? "bg-black text-white border-black" : "bg-white"}`}>Step {n}</div>
+        ))}
+      </div>
+
+      {/* Card */}
+      <div className="mt-4 border rounded-2xl p-4">
+        {step === 1 && (
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Asset (symbol)</label>
+              <input
+                className="w-full border rounded-xl p-2 mt-1"
+                placeholder="e.g., BTCUSDT"
+                value={draft.asset}
+                onChange={(e) => setDraft({ ...draft, asset: e.target.value })}
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium">Direction</label>
+              <div className="mt-1 flex gap-3">
+                {["long","short"].map(d => (
+                  <label key={d} className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="direction"
+                      checked={draft.direction === d}
+                      onChange={() => setDraft({ ...draft, direction: d })}
+                    />
+                    <span className="capitalize">{d}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium">Timeframe</label>
+              <select
+                className="w-full border rounded-xl p-2 mt-1"
+                value={draft.timeframe}
+                onChange={(e) => setDraft({ ...draft, timeframe: e.target.value })}
+              >
+                {["1h","4h","1d","1w"].map(tf => <option key={tf} value={tf}>{tf}</option>)}
+              </select>
+            </div>
+          </div>
+        )}
+
+        {step === 2 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium">Entry (number)</label>
+              <input
+                className="w-full border rounded-xl p-2 mt-1"
+                placeholder="e.g., 60000"
+                value={draft.entry}
+                onChange={(e) => setDraft({ ...draft, entry: e.target.value })}
+                inputMode="decimal"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Stop (number)</label>
+              <input
+                className="w-full border rounded-xl p-2 mt-1"
+                placeholder="e.g., 58800"
+                value={draft.stop}
+                onChange={(e) => setDraft({ ...draft, stop: e.target.value })}
+                inputMode="decimal"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="text-sm font-medium">Targets (comma-separated)</label>
+              <input
+                className="w-full border rounded-xl p-2 mt-1"
+                placeholder="e.g., 61000, 61800, 63000"
+                value={draft.targetsInput}
+                onChange={(e) => setDraft({ ...draft, targetsInput: e.target.value })}
+                inputMode="decimal"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                For LONG: all targets must be &gt; entry. For SHORT: all targets must be &lt; entry.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {step === 3 && (
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Optional notes</label>
+              <textarea
+                className="w-full border rounded-xl p-2 mt-1"
+                rows={4}
+                placeholder="Setup rationale, invalidation details, etc."
+                value={draft.notes}
+                onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
+              />
+            </div>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={draft.skin}
+                onChange={(e) => setDraft({ ...draft, skin: e.target.checked })}
+              />
+              <span className="text-sm">
+                I confirm I have taken (or will take immediately) the same position — “skin in the game”.
+              </span>
+            </label>
+          </div>
+        )}
+
+        {step === 4 && (
+          <div className="space-y-2 text-sm">
+            <div><span className="font-medium">Asset:</span> {draft.asset || "—"}</div>
+            <div><span className="font-medium">Direction:</span> {draft.direction}</div>
+            <div><span className="font-medium">Timeframe:</span> {draft.timeframe}</div>
+            <div><span className="font-medium">Entry:</span> {draft.entry || "—"}</div>
+            <div><span className="font-medium">Stop:</span> {draft.stop || "—"}</div>
+            <div><span className="font-medium">Targets:</span> {draft.targetsInput || "—"}</div>
+            <div><span className="font-medium">Skin in the game:</span> {draft.skin ? "Yes" : "No"}</div>
+            <div><span className="font-medium">Notes:</span> {draft.notes || "—"}</div>
+          </div>
+        )}
+      </div>
+
+      {/* Errors / success */}
+      {err && <div className="mt-3 text-sm text-red-600">{err}</div>}
+      {okMsg && <div className="mt-3 text-sm text-green-700">{okMsg}</div>}
+
+      {/* Actions */}
+      <div className="mt-4 flex items-center justify-between">
+        <button
+          onClick={back}
+          className="border px-4 py-2 rounded-xl disabled:opacity-50"
+          disabled={step === 1 || busy}
+        >
+          Back
+        </button>
+
+        {step < 4 ? (
+          <button
+            onClick={next}
+            className="border px-4 py-2 rounded-xl hover:bg-gray-50 disabled:opacity-50"
+            disabled={busy}
+          >
+            Next
+          </button>
+        ) : (
+          <button
+            onClick={submit}
+            className="border px-4 py-2 rounded-xl hover:bg-gray-50 disabled:opacity-50"
+            disabled={busy}
+          >
+            {busy ? "Submitting…" : "Submit Idea"}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+2) Make sure the imports exist at the top of App.jsx
+
+You should already have these from earlier steps, but confirm these are present (add if missing):
+
+import { useEffect, useState } from "react";
+import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
+
+// Firebase
+import { auth, db } from "./lib/firebase";
+import { onAuthStateChanged, signInAnonymously, signOut } from "firebase/auth";
+import {
+  collection, addDoc, serverTimestamp,
+  // (plus the others you already imported above for Landing/Feed)
+} from "firebase/firestore";
+
+// Components
+import IdeaCard from "./components/IdeaCard";

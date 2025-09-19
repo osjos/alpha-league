@@ -1,0 +1,153 @@
+Replace src/App.jsx with this
+
+In Replit file explorer, open web/src/App.jsx and paste:
+
+import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
+
+function Landing() {
+  return (
+    <div className="max-w-5xl mx-auto p-6">
+      <header className="py-8">
+        <h1 className="text-3xl font-bold">Alpha League</h1>
+        <p className="text-gray-600 mt-2">
+          Find, submit, and track alpha-generating trading ideas.
+        </p>
+      </header>
+
+      {/* Leaderboard preview */}
+      <section className="mt-8">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold">Top 5 Leaderboard (preview)</h2>
+          <Link to="/leaderboard" className="text-sm underline">View all</Link>
+        </div>
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1,2,3,4,5].map((i) => (
+            <div key={i} className="p-4 rounded-2xl border">
+              <div className="font-medium">Trader {i}</div>
+              <div className="text-sm text-gray-600">
+                WR: -- • PF: -- • 30d PnL: -- • MDD: --
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function Feed() {
+  return (
+    <div className="max-w-5xl mx-auto p-6">
+      <h1 className="text-2xl font-semibold">Feed</h1>
+      <p className="text-gray-600 mt-2">Approved ideas with filters (asset, direction, timeframe).</p>
+
+      {/* Filters placeholder */}
+      <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <select className="border rounded-xl p-2"><option>Asset: All</option></select>
+        <select className="border rounded-xl p-2"><option>Direction: All</option></select>
+        <select className="border rounded-xl p-2"><option>Timeframe: All</option></select>
+      </div>
+
+      {/* Idea cards placeholder */}
+      <div className="mt-6 space-y-3">
+        {[1,2,3].map((i) => (
+          <div key={i} className="border rounded-2xl p-4">
+            <div className="font-medium">BTCUSDT • Long</div>
+            <div className="text-sm text-gray-600">4h timeframe • Submitted by Trader {i}</div>
+            <div className="text-sm mt-2">Entry: -- • Stop: -- • Targets: --</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SubmitIdea() {
+  return (
+    <div className="max-w-3xl mx-auto p-6">
+      <h1 className="text-2xl font-semibold">Submit Idea</h1>
+      <p className="text-gray-600 mt-2">
+        3–4 step wizard with validation & “skin in the game” checkbox (coming next).
+      </p>
+      <div className="mt-6 border rounded-2xl p-4">Form wizard placeholder</div>
+    </div>
+  );
+}
+
+function Leaderboard() {
+  return (
+    <div className="max-w-5xl mx-auto p-6">
+      <h1 className="text-2xl font-semibold">Leaderboard</h1>
+      <p className="text-gray-600 mt-2">Sortable columns: Trader, WR, PF, 30d PnL, MDD (coming next).</p>
+      <div className="mt-6 overflow-x-auto">
+        <table className="min-w-full text-sm">
+          <thead>
+            <tr className="text-left border-b">
+              <th className="py-2 pr-4">Trader</th>
+              <th className="py-2 pr-4">WR</th>
+              <th className="py-2 pr-4">PF</th>
+              <th className="py-2 pr-4">30d PnL</th>
+              <th className="py-2 pr-4">MDD</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[1,2,3,4,5].map((i) => (
+              <tr key={i} className="border-b">
+                <td className="py-2 pr-4 font-medium">Trader {i}</td>
+                <td className="py-2 pr-4">--%</td>
+                <td className="py-2 pr-4">--</td>
+                <td className="py-2 pr-4">--</td>
+                <td className="py-2 pr-4">--</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      {/* Top nav */}
+      <nav className="w-full border-b bg-white">
+        <div className="max-w-5xl mx-auto px-6 py-3 flex items-center gap-4">
+          <Link to="/" className="font-semibold">Alpha League</Link>
+          <div className="ml-auto flex gap-4 text-sm">
+            <Link to="/feed" className="hover:underline">Feed</Link>
+            <Link to="/submit" className="hover:underline">Submit Idea</Link>
+            <Link to="/leaderboard" className="hover:underline">Leaderboard</Link>
+          </div>
+        </div>
+      </nav>
+
+      {/* Routes */}
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        <Route path="/feed" element={<Feed />} />
+        <Route path="/submit" element={<SubmitIdea />} />
+        <Route path="/leaderboard" element={<Leaderboard />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+
+Ensure src/main.jsx still renders <App />
+
+Open web/src/main.jsx. It should look like this by default:
+
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import App from './App.jsx'
+import './index.css'
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>,
+)
+
+
+(If it differs, align it to the above.)

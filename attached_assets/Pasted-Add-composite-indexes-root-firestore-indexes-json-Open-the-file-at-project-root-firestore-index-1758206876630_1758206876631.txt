@@ -1,3 +1,7 @@
+Add composite indexes (root: firestore.indexes.json)
+
+Open the file at project root: firestore.indexes.json and replace its contents with:
+
 {
   "indexes": [
     {
@@ -79,3 +83,6 @@
   ],
   "fieldOverrides": []
 }
+
+
+These cover all feed filter combos (asset / direction / timeframe) with status == "approved" and server-side orderBy(createdAt desc).

@@ -1,20 +1,4 @@
-entrypoint = "index.js"
-modules = ["nodejs-22"]
-hidden = [".config", "package-lock.json"]
-
-[gitHubImport]
-requiredFiles = [".replit", "replit.nix", "package.json", "package-lock.json"]
-
-[nix]
-channel = "stable-24_11"
-
-[deployment]
-run = ["node", "index.js"]
-deploymentTarget = "autoscale"
-ignorePorts = false
-
-[agent]
-expertMode = true
+modules = ["nodejs-20", "java", "java-graalvm22.3"]
 
 [workflows]
 runButton = "Project"
@@ -26,24 +10,36 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Node.js App"
+args = "Alpha League Auto"
 
 [[workflows.workflow]]
-name = "Node.js App"
+name = "Alpha League Auto"
 author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev:auto"
+waitForPort = 5000
 
 [workflows.workflow.metadata]
 outputType = "webview"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "npm start"
-waitForPort = 5000
-
-[[ports]]
-localPort = 3000
-externalPort = 80
-
 [[ports]]
 localPort = 5000
 externalPort = 80
+
+[[ports]]
+localPort = 41949
+externalPort = 3000
+exposeLocalhost = true
+
+[nix]
+channel = "stable-25_05"
+
+[agent]
+expertMode = true
+
+[deployment]
+deploymentTarget = "autoscale"
+run = ["npm", "run", "preview", "--", "--host", "0.0.0.0", "--port", "5000"]
+build = ["npm", "run", "build"]

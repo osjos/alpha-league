@@ -1,0 +1,108 @@
+Switch Feed to server-side filtering & sorting
+
+We’ll replace the client-side filter with a query built from the dropdowns.
+
+Open web/src/App.jsx, inside your Feed() component:
+
+Update imports (top of file, make sure you have):
+
+import {
+  collection, query, where, orderBy, limit, onSnapshot, doc, setDoc, serverTimestamp
+} from "firebase/firestore";
+
+
+Replace the current useEffect and options section inside Feed() with this version:
+
+// Filters (unchanged UI state)
+const [asset, setAsset] = useState("all");
+const [direction, setDirection] = useState("all");
+const [timeframe, setTimeframe] = useState("all");
+
+useEffect(() => {
+  setLoading(true);
+
+  // Build the base query: approved ideas ordered by createdAt desc
+  const clauses = [
+    where("status", "==", "approved"),
+    orderBy("createdAt", "desc"),
+    limit(50),
+  ];
+
+  // Add equality filters only when not "all"
+  const col = collection(db, "ideas");
+  let qref = query(col, ...clauses);
+
+  if (asset !== "all") {
+    qref = query(col, where("status", "==", "approved"), where("asset", "==", asset), orderBy("createdAt", "desc"), limit(50));
+  }
+  if (direction !== "all" && asset === "all") {
+    qref = query(col, where("status", "==", "approved"), where("direction", "==", direction), orderBy("createdAt", "desc"), limit(50));
+  }
+  if (timeframe !== "all" && asset === "all" && direction === "all") {
+    qref = query(col, where("status", "==", "approved"), where("timeframe", "==", timeframe), orderBy("createdAt", "desc"), limit(50));
+  }
+
+  // Apply 2- and 3-way combos explicitly to keep index sets clear
+  if (asset !== "all" && direction !== "all" && timeframe === "all") {
+    qref = query(col,
+      where("status", "==", "approved"),
+      where("asset", "==", asset),
+      where("direction", "==", direction),
+      orderBy("createdAt", "desc"),
+      limit(50)
+    );
+  }
+
+  if (asset !== "all" && timeframe !== "all" && direction === "all") {
+    qref = query(col,
+      where("status", "==", "approved"),
+      where("asset", "==", asset),
+      where("timeframe", "==", timeframe),
+      orderBy("createdAt", "desc"),
+      limit(50)
+    );
+  }
+
+  if (direction !== "all" && timeframe !== "all" && asset === "all") {
+    qref = query(col,
+      where("status", "==", "approved"),
+      where("direction", "==", direction),
+      where("timeframe", "==", timeframe),
+      orderBy("createdAt", "desc"),
+      limit(50)
+    );
+  }
+
+  if (asset !== "all" && direction !== "all" && timeframe !== "all") {
+    qref = query(col,
+      where("status", "==", "approved"),
+      where("asset", "==", asset),
+      where("direction", "==", direction),
+      where("timeframe", "==", timeframe),
+      orderBy("createdAt", "desc"),
+      limit(50)
+    );
+  }
+
+  const unsub = onSnapshot(qref, (snap) => {
+    const rows = [];
+    snap.forEach((d) => rows.push({ id: d.id, ...d.data() }));
+    setIdeas(rows);
+    setLoading(false);
+  }, (err) => {
+    console.warn("Feed listen failed:", err?.message || err);
+    setLoading(false);
+  });
+
+  return () => unsub();
+}, [asset, direction, timeframe]);
+
+
+Make the dropdowns simple & static for now (so options don’t “disappear” when filtered). Replace your options with:
+
+const assetOptions = ["all", "BTCUSDT", "ETHUSDT", "SOLUSDT"];
+const directionOptions = ["all", "long", "short"];
+const timeframeOptions = ["all", "1h", "4h", "1d", "1w"];
+
+
+Remove the client-side filtered array and render ideas directly (your current render block will likely already do that after the change).
