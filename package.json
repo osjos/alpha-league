@@ -14,6 +14,7 @@
     "dev:auto": "bash -lc 'if [ \"$VITE_USE_EMULATORS\" = \"true\" ]; then npm run dev:emu; else npm run web; fi'"
   },
   "dependencies": {
+    "@faker-js/faker": "^10.0.0",
     "firebase": "^12.2.1",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
