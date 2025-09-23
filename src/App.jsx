@@ -6,6 +6,7 @@ import {
 } from "firebase/firestore";
 import IdeaCard from "./components/IdeaCard";
 import Admin from "./pages/Admin.jsx";
+import IdeaDetailPage from "./pages/IdeaDetailPage.jsx";
 import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
 
 function Landing() {
@@ -867,6 +868,7 @@ export default function App() {
         <Route path="/submit" element={<SubmitIdea />} />
         <Route path="/leaderboard" element={<Leaderboard />} />
         <Route path="/admin" element={<Admin />} />
+        <Route path="/idea/:id" element={<IdeaDetailPage />} />
       </Routes>
     </BrowserRouter>
   );
