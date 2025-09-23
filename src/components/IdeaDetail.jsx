@@ -1,6 +1,7 @@
 import React from "react";
 import { useLivePrice } from "../hooks/useLivePrice";
 import { computeIdeaPnL } from "../lib/pnl";
+import MilestoneTracker from "./ideas/MilestoneTracker";
 
 export default function IdeaDetail({ idea, fills }) {
   // Adjust symbol field as needed - using 'asset' since that's what IdeaCard uses
@@ -11,13 +12,19 @@ export default function IdeaDetail({ idea, fills }) {
     // fields: { symbol: "asset", price: "value", ts: "timestamp" }
   });
 
-  // Debug info
-  console.log("IdeaDetail - Symbol:", symbol, "Current price:", current, "Loading:", loading, "Error:", error);
 
   // Compute PnL only when we have a current price
   const pnl = current
     ? computeIdeaPnL({ idea, fills, current })
     : null;
+
+  // Prepare idea with target mapping for MilestoneTracker
+  const ideaWithTargets = {
+    ...idea,
+    side: idea?.side || idea?.direction,
+    t1: idea?.targets?.[0],
+    t2: idea?.targets?.[1],
+  };
 
   return (
     <div className="flex flex-col gap-3">
@@ -38,6 +45,9 @@ export default function IdeaDetail({ idea, fills }) {
           </div>
         )}
       </div>
+
+      {/* Milestone Tracker */}
+      <MilestoneTracker idea={ideaWithTargets} fills={fills} current={current} />
 
       <div className="rounded-lg border p-3">
         <div className="font-medium">PnL (Mark-to-Market)</div>
