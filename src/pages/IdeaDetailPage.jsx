@@ -3,12 +3,14 @@ import { useParams, Link } from "react-router-dom";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import IdeaDetail from "../components/IdeaDetail";
+import { seedPriceData } from "../utils/seedPriceData";
 
 export default function IdeaDetailPage() {
   const { id } = useParams();
   const [idea, setIdea] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [priceSeeding, setPriceSeeding] = useState(false);
 
   // Test fills array as suggested in the requirements
   const testFills = [
@@ -79,13 +81,30 @@ export default function IdeaDetailPage() {
     );
   }
 
+  const handleSeedPrices = async () => {
+    setPriceSeeding(true);
+    const success = await seedPriceData();
+    setPriceSeeding(false);
+    if (success) {
+      // Trigger a re-render to pick up the new price data
+      window.location.reload();
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto p-6">
       {/* Header with back link */}
-      <div className="mb-6">
+      <div className="mb-6 flex items-center justify-between">
         <Link to="/feed" className="text-blue-600 hover:underline text-sm">
           ← Back to Feed
         </Link>
+        <button
+          onClick={handleSeedPrices}
+          disabled={priceSeeding}
+          className="text-sm border px-3 py-1 rounded-xl hover:bg-gray-50 disabled:opacity-50"
+        >
+          {priceSeeding ? "Seeding prices..." : "Seed Price Data"}
+        </button>
       </div>
 
       {/* Basic idea info */}

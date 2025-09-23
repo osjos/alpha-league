@@ -11,6 +11,9 @@ export default function IdeaDetail({ idea, fills }) {
     // fields: { symbol: "asset", price: "value", ts: "timestamp" }
   });
 
+  // Debug info
+  console.log("IdeaDetail - Symbol:", symbol, "Current price:", current, "Loading:", loading, "Error:", error);
+
   // Compute PnL only when we have a current price
   const pnl = current
     ? computeIdeaPnL({ idea, fills, current })
