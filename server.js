@@ -1,9 +1,14 @@
 // server.js
-// Simple Express server for API endpoints and scheduled tasks
+// Express server for API endpoints, scheduled tasks, and serving the frontend
 import express from "express";
 import cors from "cors";
+import path from "path";
+import { fileURLToPath } from "url";
 import { tickUpdatePrices } from "./scripts/update_prices_core.js";
 import { tickUpdateAggregates } from "./scripts/update_aggregates_core.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -11,6 +16,9 @@ const PORT = process.env.PORT || 3001;
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Serve static files from the built frontend (dist folder)
+app.use(express.static(path.join(__dirname, "dist")));
 
 // Health check endpoint
 app.get("/health", (req, res) => {
@@ -62,6 +70,7 @@ app.post("/cron/tick", async (req, res) => {
     return res.status(500).json({ ok: false, error: e.message });
   }
 });
+
 
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 API Server running on port ${PORT}`);
