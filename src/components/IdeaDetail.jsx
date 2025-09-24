@@ -2,6 +2,8 @@ import React from "react";
 import { useLivePrice } from "../hooks/useLivePrice";
 import { computeIdeaPnL } from "../lib/pnl";
 import MilestoneTracker from "./ideas/MilestoneTracker";
+import EventTimeline from "./ideas/EventTimeline";
+import { useIdeaEvents } from "../hooks/useIdeaEvents";
 
 export default function IdeaDetail({ idea, fills }) {
   // Adjust symbol field as needed - using 'asset' since that's what IdeaCard uses
@@ -26,6 +28,14 @@ export default function IdeaDetail({ idea, fills }) {
     t2: idea?.targets?.[1],
   };
 
+  // Get events timeline 
+  const { events, loading: eventsLoading } = useIdeaEvents({
+    ideaId: idea?.id,
+    idea: ideaWithTargets,
+    current,
+    priceTs: lastUpdated
+  });
+
   return (
     <div className="flex flex-col gap-3">
       <h2 className="text-xl font-semibold">Idea: {idea?.title || idea?.id}</h2>
@@ -45,6 +55,9 @@ export default function IdeaDetail({ idea, fills }) {
           </div>
         )}
       </div>
+
+      {/* Event Timeline */}
+      <EventTimeline events={events} />
 
       {/* Milestone Tracker */}
       <MilestoneTracker idea={ideaWithTargets} fills={fills} current={current} />

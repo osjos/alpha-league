@@ -1,0 +1,63 @@
+import React from "react";
+
+/**
+ * EventTimeline
+ * @param {Array} events [{ id, type, ts: Date, label, source }]
+ */
+export default function EventTimeline({ events }) {
+  return (
+    <div className="rounded-lg border p-3">
+      <div className="font-medium mb-2">Timeline</div>
+
+      {(!events || events.length === 0) ? (
+        <div className="text-sm opacity-70">No events yet.</div>
+      ) : (
+        <ul className="relative pl-4">
+          {/* vertical line */}
+          <div className="absolute left-1 top-0 bottom-0 w-px bg-gray-200" />
+          {events.map((e, idx) => (
+            <li key={e.id || idx} className="relative mb-3">
+              {/* dot */}
+              <span className={`absolute -left-[7px] mt-1 inline-block h-3 w-3 rounded-full ${
+                colorFor(e.type, e.source)
+              }`} />
+              <div className="ml-2">
+                <div className="text-sm">
+                  <b>{prettyType(e.type)}</b>
+                  {e.source === "computed" ? (
+                    <span className="ml-2 text-[11px] rounded bg-amber-100 px-1.5 py-0.5 text-amber-700">live</span>
+                  ) : null}
+                </div>
+                <div className="text-sm">{e.label}</div>
+                <div className="text-xs opacity-70">
+                  {e.ts?.toLocaleString?.() || ""}
+                  {e.source ? ` • ${e.source}` : ""}
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function colorFor(type, source) {
+  const t = String(type || "").toUpperCase();
+  if (t === "SUBMITTED") return "bg-gray-400";
+  if (t === "APPROVED") return "bg-emerald-500";
+  if (t === "FILL") return "bg-blue-500";
+  if (t === "TARGET_HIT") return "bg-purple-500";
+  if (t === "STOP_HIT") return "bg-red-500";
+  return source === "computed" ? "bg-amber-500" : "bg-gray-300";
+}
+
+function prettyType(type) {
+  const t = String(type || "").toUpperCase();
+  if (t === "SUBMITTED") return "Submitted";
+  if (t === "APPROVED") return "Approved";
+  if (t === "FILL") return "Fill";
+  if (t === "TARGET_HIT") return "Target Hit";
+  if (t === "STOP_HIT") return "Stop Hit";
+  return t;
+}
