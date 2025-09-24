@@ -1,0 +1,76 @@
+Wire PnL into the Idea Detail page
+
+Open your Idea detail component (adjust path/name to your project), and:
+
+// IdeaDetail.jsx
+import React from "react";
+import { useLivePrice } from "../hooks/useLivePrice";
+import { computeIdeaPnL } from "../lib/pnl";
+
+export default function IdeaDetail({ idea, fills }) {
+  // Adjust symbol field as needed
+  const symbol = idea?.symbol || idea?.asset || idea?.ticker;
+
+  const { price: current, lastUpdated, isLive, loading, error } = useLivePrice(symbol, {
+    // If your Firestore schema differs, map fields here:
+    // fields: { symbol: "asset", price: "value", ts: "timestamp" }
+  });
+
+  // Compute PnL only when we have a current price
+  const pnl = current
+    ? computeIdeaPnL({ idea, fills, current })
+    : null;
+
+  return (
+    <div className="flex flex-col gap-3">
+      <h2 className="text-xl font-semibold">Idea: {idea?.title || idea?.id}</h2>
+      <div className="text-sm opacity-70">Side: {idea?.side}</div>
+
+      <div className="rounded-lg border p-3">
+        <div className="font-medium">Live Price</div>
+        {loading && <div>Loading…</div>}
+        {error && <div className="text-red-500">Price error: {error}</div>}
+        {!loading && current != null && (
+          <div className="flex items-center gap-3">
+            <div className="text-2xl tabular-nums">{current.toLocaleString()}</div>
+            <div className="text-xs opacity-70">
+              {isLive ? "live" : "polling"}
+              {lastUpdated ? ` • ${lastUpdated.toLocaleTimeString()}` : ""}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="rounded-lg border p-3">
+        <div className="font-medium">PnL (Mark-to-Market)</div>
+        {pnl ? (
+          <ul className="text-sm mt-2 space-y-1">
+            <li>Net Qty: <span className="tabular-nums">{pnl.netQty}</span></li>
+            <li>Avg Entry: <span className="tabular-nums">{pnl.avgEntry?.toFixed(2) ?? "—"}</span></li>
+            <li>Realized PnL: <span className="tabular-nums">{pnl.realizedPnl.toFixed(2)}</span></li>
+            <li>Open PnL: <span className="tabular-nums">{pnl.mtmPnl.toFixed(2)}</span></li>
+            <li>Open PnL %: <span className="tabular-nums">{pnl.mtmPnlPct.toFixed(2)}%</span></li>
+            <li>R Multiple: <span className="tabular-nums">{pnl.rMultiple == null ? "—" : pnl.rMultiple.toFixed(2)}</span></li>
+          </ul>
+        ) : (
+          <div className="text-sm opacity-70">Waiting for price…</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
+Where do idea and fills come from?
+
+If you already fetch them on the page (e.g., Firestore ideas/{id} and fills under fills collection filtered by ideaId), pass them in as props.
+
+If not yet wired, you can temporarily hardcode a test fills array to verify the math.
+
+Example test fills (temporary):
+
+const fills = [
+  { side: "BUY",  qty: 1,   price: 50000 },
+  { side: "BUY",  qty: 0.5, price: 52000 },
+  { side: "SELL", qty: 0.3, price: 54000 },
+];

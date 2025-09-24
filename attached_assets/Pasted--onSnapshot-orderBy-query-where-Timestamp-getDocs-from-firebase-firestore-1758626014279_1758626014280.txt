@@ -1,0 +1,145 @@
+
+  onSnapshot,
+  orderBy,
+  query,
+  where,
+  Timestamp,
+  getDocs
+} from "firebase/firestore";
+import { app } from "@/lib/firebase"; // adjust if your firebase export name/path differs
+
+type LivePrice = {
+  price: number | null;
+  lastUpdated: Date | null;
+  isLive: boolean;     // true if Firestore onSnapshot is active
+  loading: boolean;
+  error: string | null;
+};
+
+/**
+ * useLivePrice
+ * Subscribes to Firestore for the newest price for a given symbol.
+ * Falls back to polling (simple getDocs) if snapshot fails or isn’t available.
+ *
+ * @param symbol e.g. "BTC-USD" or "ETH-USD" (match your Firestore field)
+ * @param options.pollMs polling interval in ms when snapshot isn’t used
+ */
+export function useLivePrice(
+  symbol: string | undefined,
+  options: { pollMs?: number } = {}
+): LivePrice {
+  const pollMs = options.pollMs ?? 8000; // 8s is gentle; adjust as needed
+  const db = useMemo(() => getFirestore(app), []);
+  const [price, setPrice] = useState<number | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [isLive, setIsLive] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(!!symbol);
+  const [error, setError] = useState<string | null>(null);
+
+  const pollTimer = useRef<number | null>(null);
+  const unsubRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    if (!symbol) {
+      setLoading(false);
+      return;
+    }
+
+    // Cleanup any previous listeners/timers
+    if (unsubRef.current) {
+      unsubRef.current();
+      unsubRef.current = null;
+    }
+    if (pollTimer.current) {
+      window.clearInterval(pollTimer.current);
+      pollTimer.current = null;
+    }
+
+    setLoading(true);
+    setError(null);
+    setIsLive(false);
+
+    const pricesRef = collection(db, "prices");
+    // If you store symbol differently, change 'symbol' below accordingly.
+    const q = query(
+      pricesRef,
+      where("symbol", "==", symbol),
+      orderBy("ts", "desc"),
+      limit(1)
+    );
+
+    // Try real-time Firestore first
+    try {
+      const unsub = onSnapshot(
+        q,
+        (snap) => {
+          setIsLive(true);
+          setLoading(false);
+          if (!snap.empty) {
+            const doc = snap.docs[0].data() as {
+              price?: number;
+              ts?: Timestamp;
+            };
+            if (typeof doc.price === "number") setPrice(doc.price);
+            if (doc.ts instanceof Timestamp) setLastUpdated(doc.ts.toDate());
+          }
+        },
+        (err) => {
+          // Snapshot failed (rules, network, etc.) → fall back to polling
+          setIsLive(false);
+          setError(null); // don’t scare the UI—just fall back
+          startPolling();
+        }
+      );
+      unsubRef.current = unsub;
+    } catch (err: any) {
+      // If onSnapshot throws immediately, also fall back
+      setIsLive(false);
+      setError(null);
+      startPolling();
+    }
+
+    function startPolling() {
+      // One immediate fetch + interval
+      const fetchOnce = async () => {
+        try {
+          const snap = await getDocs(q);
+          setLoading(false);
+          if (!snap.empty) {
+            const doc = snap.docs[0].data() as {
+              price?: number;
+              ts?: Timestamp;
+            };
+            if (typeof doc.price === "number") setPrice(doc.price);
+            if (doc.ts instanceof Timestamp) setLastUpdated(doc.ts.toDate());
+          }
+        } catch (e: any) {
+          setError(e?.message ?? "Polling failed");
+        }
+      };
+
+      fetchOnce();
+      pollTimer.current = window.setInterval(fetchOnce, pollMs);
+    }
+
+    return () => {
+      if (unsubRef.current) {
+        unsubRef.current();
+        unsubRef.current = null;
+      }
+      if (pollTimer.current) {
+        window.clearInterval(pollTimer.current);
+        pollTimer.current = null;
+      }
+    };
+  }, [db, symbol, pollMs]);
+
+  return { price, lastUpdated, isLive, loading, error };
+}
+Notes:
+
+This first tries real-time via onSnapshot. If it fails (e.g., security rules or offline), it automatically falls back to polling every ~8 seconds.
+
+If your prices collection uses different field names (e.g., asset instead of symbol, or timestamp instead of ts), update the where(...) and orderBy(...) lines accordingly.
+
+If your data is nested (e.g., prices/{symbol}/ticks/...), I can give you a variant—just tell me your path and fields.

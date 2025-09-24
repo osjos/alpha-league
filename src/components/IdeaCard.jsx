@@ -1,4 +1,6 @@
 // src/components/IdeaCard.jsx
+import { Link } from "react-router-dom";
+
 export default function IdeaCard({ idea }) {
   const {
     asset = "—",
@@ -17,21 +19,23 @@ export default function IdeaCard({ idea }) {
       "—";
 
   return (
-    <div className="border rounded-2xl p-4">
-      <div className="flex items-center justify-between">
-        <div className="font-medium">{asset} • {direction?.toUpperCase?.()}</div>
-        <div className="text-xs text-gray-500">{timeframe}</div>
-      </div>
+    <Link to={`/idea/${idea?.id}`} className="block">
+      <div className="border rounded-2xl p-4 hover:bg-gray-50 transition-colors">
+        <div className="flex items-center justify-between">
+          <div className="font-medium">{asset} • {direction?.toUpperCase?.()}</div>
+          <div className="text-xs text-gray-500">{timeframe}</div>
+        </div>
 
-      <div className="text-sm text-gray-600 mt-1">
-        By {submittedBy} • {created}
-      </div>
+        <div className="text-sm text-gray-600 mt-1">
+          By {submittedBy} • {created}
+        </div>
 
-      <div className="text-sm mt-3">
-        <div>Entry: {entry ?? "—"}</div>
-        <div>Stop: {stop ?? "—"}</div>
-        <div>Targets: {Array.isArray(targets) && targets.length ? targets.join(", ") : "—"}</div>
+        <div className="text-sm mt-3">
+          <div>Entry: {entry ?? "—"}</div>
+          <div>Stop: {stop ?? "—"}</div>
+          <div>Targets: {Array.isArray(targets) && targets.length ? targets.join(", ") : "—"}</div>
+        </div>
       </div>
-    </div>
+    </Link>
   );
 }

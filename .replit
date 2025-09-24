@@ -12,6 +12,10 @@ author = "agent"
 task = "workflow.run"
 args = "Alpha League Auto"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Alpha League Server"
+
 [[workflows.workflow]]
 name = "Alpha League Auto"
 author = "agent"
@@ -24,14 +28,34 @@ waitForPort = 5000
 [workflows.workflow.metadata]
 outputType = "webview"
 
+[[workflows.workflow]]
+name = "Alpha League Server"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
+waitForPort = 5000
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
 [[ports]]
 localPort = 5000
 externalPort = 80
 
 [[ports]]
-localPort = 41949
+localPort = 5001
+externalPort = 3001
+
+[[ports]]
+localPort = 38143
 externalPort = 3000
 exposeLocalhost = true
+
+[[ports]]
+localPort = 42613
+externalPort = 3002
 
 [nix]
 channel = "stable-25_05"
